@@ -8,4 +8,4 @@ An English copy of the Licence is shipped in a file called LICENSE along with th
 You may obtain copies of the Licence in any of the official languages at https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12.
 """
 
-from .__version__ import __version__ as __version__
+__version__ = '0.0.1'
