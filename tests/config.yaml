@@ -1,0 +1,12 @@
+nft-api:
+  tokens:
+    $2y$05$1g7dRvcw2Jkml7WHIWa1Q.O9qg5shbHA8VHxZhwkmCTVmnkl4GDjW:  # == ICanOnlyGet
+      /set/inet/filter/testset4:
+        - GET
+    $2y$05$7e4Slhr6/SWvaQXGRQywdua0jpm6HxOCiC8tYowpR2ioW2.ZKFdHe:  # == foo
+      /set/inet/filter/testset4:
+        - GET
+        - POST
+      /set/inet/filter/testset6:
+        - GET
+        - POST

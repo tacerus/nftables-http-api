@@ -8,5 +8,5 @@ podman run                \
 	-it                     \
 	-v .:"$wd"              \
 	registry.opensuse.org/home/crameleon/containers/containers/crameleon/pytest-nftables:latest \
-	env PYTHONPATH="$wd" pytest --pdb --pdbcls=IPython.terminal.debugger:Pdb -rA -s -v -x "$wd"/tests
+	env NFT-API-CONFIG="$wd"/tests/config.yaml PYTHONPATH="$wd" pytest --pdb --pdbcls=IPython.terminal.debugger:Pdb -rA -s -v -x "$wd"/tests
 
