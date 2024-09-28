@@ -1,6 +1,18 @@
+"""
+A RESTful HTTP API for nftables
+Copyright 2024, Georg Pfuetzenreuter <mail@georg-pfuetzenreuter.net>
+
+Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the European Commission - subsequent versions of the EUPL (the "Licence").
+You may not use this work except in compliance with the Licence.
+An English copy of the Licence is shipped in a file called LICENSE along with this applications source code.
+You may obtain copies of the Licence in any of the official languages at https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12.
+"""
+
 from bcrypt import checkpw
 from falcon import HTTPUnauthorized
+
 from nftables_api.config import config
+
 
 class AuthMiddleWare:
   def _match(self, token_plain, token_hashed):
@@ -23,7 +35,7 @@ class AuthMiddleWare:
     return False
 
 
-  def process_request(self, req, resp):
+  def process_request(self, req, resp):  # noqa ARG002, resp is not used but needs to be passed by Falcon
     """
     Rudimentary token validation - check if it is worth walking further down the authorization chain
     """
@@ -40,7 +52,7 @@ class AuthMiddleWare:
       )
 
 
-  def process_resource(self, req, resp, resource, params):
+  def process_resource(self, req, resp, resource, params):  # noqa ARG002, resp is not used but needs to be passed by Falcon
     """
     Fully validate whether a token is authorized to perform the request
     """
@@ -51,13 +63,15 @@ class AuthMiddleWare:
       if not self._match(token, config_token):
         continue
 
-      for config_path, methods in config_paths.items():
+      for got_config_path, methods in config_paths.items():
         if not isinstance(methods, list):
-          raise RuntimeError(f'Invalid method configured for path {config_path}')
+          raise RuntimeError(f'Invalid method configured for path {got_config_path}')
 
         # a leading slash causes an empty first list entry in the split
-        if config_path.startswith('/'):
-          config_path = config_path[1:]
+        if got_config_path.startswith('/'):
+          config_path = got_config_path[1:]
+        else:
+          config_path = got_config_path
 
         path_elements = config_path.split('/')
 
@@ -76,12 +90,12 @@ class AuthMiddleWare:
             break
 
         else:
-          if req.method in methods:
-            return
-          else:
+          if req.method not in methods:
             raise HTTPUnauthorized(
               title='Unauthorized method for path',
             )
+
+          return
 
     raise HTTPUnauthorized(
       title='Unauthorized',

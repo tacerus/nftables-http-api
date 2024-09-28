@@ -1,8 +1,20 @@
-import falcon
+"""
+A RESTful HTTP API for nftables
+Copyright 2024, Georg Pfuetzenreuter <mail@georg-pfuetzenreuter.net>
+
+Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the European Commission - subsequent versions of the EUPL (the "Licence").
+You may not use this work except in compliance with the Licence.
+An English copy of the Licence is shipped in a file called LICENSE along with this applications source code.
+You may obtain copies of the Licence in any of the official languages at https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12.
+"""
+
 import json
+
+import falcon
 from nftables import Nftables
-from nftables_api.utils.parse import parse_nft_response
+
 from nftables_api.utils.output import output_post
+from nftables_api.utils.parse import parse_nft_response
 
 nft = Nftables()
 nft.set_json_output(True)
@@ -47,7 +59,7 @@ class SetResource:
       response.text = json.dumps({'status': status, 'error': err_parsed})
 
 
-  def on_post(self, request, response, xfamily, xtable, xset):
+  def on_post(self, request, response, xfamily, xtable, xset):  # noqa PLR0912, todo: consider moving some of the logic to smaller functions
     raw = request.get_param_as_bool('raw', default=False)
     data = request.get_media()
 
@@ -73,7 +85,7 @@ class SetResource:
           'prefix': {
             'addr': addrsplit[0],
             'len': int(addrsplit[1]),
-          }
+          },
         })
 
       else:
@@ -88,19 +100,19 @@ class SetResource:
               'family': xfamily,
               'name': xset,
               'table': xtable,
-            }
-          }
-        }
-      ]
+            },
+          },
+        },
+      ],
     }
 
     if not nft.json_validate(nft_payload):
       response.status = falcon.HTTP_BAD_REQUEST
-      response.text = output_post(False, 'Payload did not validate.')
+      response.text = output_post(status=False, message='Payload did not validate.')
       return
 
     rc, out, err = nft.json_cmd(nft_payload)
-    out_parsed, status, err_parsed = parse_nft_response(rc, out, err, raw)
+    _, status, err_parsed = parse_nft_response(rc, out, err, raw)
 
     if status is True:
       response.status = falcon.HTTP_CREATED

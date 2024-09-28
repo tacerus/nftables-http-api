@@ -1,0 +1,50 @@
+[lint]
+# https://docs.astral.sh/ruff/rules/
+extend-select = [
+  "A",     # flake8-builtins
+  "ARG",   # flake8-unused-arguments
+  "BLE",   # flake8-blind-except
+  "C4",    # flake8-comprehensions
+  "COM",   # flake8-commas
+  "CPY001",# flake8-copyright
+  "E",     # pycodestyle
+  "E261",  # spaces before inline comments
+  "ERA",   # eradicate
+  "EXE",   # flake8-executable
+  "FBT",   # flake8-boolean-trap
+  "I",     # isort
+  "INP",   # flake8-no-pep420
+  "ISC",   # flake8-implicit-str-concat
+  "N",     # pep8-naming
+  "PL",    # Pylint
+  "RET",   # flake8-return
+  "RSE",   # flake8-raise
+  "RUF",   # Ruff-specific rules
+  "S",     # flake8-bandit
+  "SIM",   # flake8-simplify
+  "T20",   # flake8-print
+  "UP",    # pyupgrade
+  "W",     # pycodestyle
+  "YTT",   # flake8-2020
+]
+ignore = [
+  "E501",    # line lengths
+  "FBT002",  # booleans as function arguments
+  "S603",    # https://github.com/astral-sh/ruff/issues/4045
+  "S607",    # makes subprocess calls in test suite more portable
+]
+preview = true
+explicit-preview-rules = true
+
+[lint.per-file-ignores]
+"tests/*.py" = [
+  "INP001", # tests do not need to be part of a package
+  "S101",   # allow "assert" in test suites
+  "T201",   # lazy printing is ok in tests
+]  
+
+[lint.pydocstyle]
+convention = "pep257"
+
+[lint.isort]
+force-wrap-aliases = true
