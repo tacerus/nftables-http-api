@@ -8,6 +8,9 @@ nft = Nftables()
 nft.set_json_output(True)
 
 class SetResource:
+  def _name(self):
+    return 'set'
+
   def on_get(self, request, response, xfamily, xtable, xset):
     raw = request.get_param_as_bool('raw', default=False)
 
