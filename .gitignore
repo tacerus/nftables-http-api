@@ -1,4 +1,4 @@
 __pycache__
 dist
-nftables_api.egg-info
+nftables_api*.egg-info
 venv

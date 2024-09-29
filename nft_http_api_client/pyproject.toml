@@ -1,0 +1,49 @@
+[build-system]
+requires = ['setuptools', 'wheel']
+build-backend = 'setuptools.build_meta'
+
+
+[project]
+name = 'nftables_api-client'
+description = 'RESTful HTTP API for nftables (client)'
+dynamic = ['license', 'readme', 'version']
+authors = [
+  { name='Georg Pfuetzenreuter', email='georg+python@lysergic.dev' },
+]
+classifiers = [
+  'Development Status :: 3 - Alpha',
+  'Intended Audience :: Developers',
+  'License :: OSI Approved :: European Union Public Licence 1.2 (EUPL 1.2)',
+  'Programming Language :: Python :: 3',
+  'Programming Language :: Python :: 3.6',
+  'Programming Language :: Python :: 3.7',
+  'Programming Language :: Python :: 3.8',
+  'Programming Language :: Python :: 3.9',
+  'Programming Language :: Python :: 3.10',
+  'Programming Language :: Python :: 3.11',
+  'Programming Language :: Python :: 3.12',
+  'Topic :: Software Development',
+  'Typing :: Typed',
+  'Operating System :: POSIX :: Linux',
+]
+requires-python = '>=3.6'
+
+dependencies = [
+  'urllib3',
+]
+
+[project.optional-dependencies]
+dev = [
+  'pytest',
+  'ruff',
+]
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.dynamic]
+version = {attr = 'nftables_api_client.__version__'}
+readme = {file = ['README.md']}
+
+[tool.setuptools.packages.find]
+where = ['.']
