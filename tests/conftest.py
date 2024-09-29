@@ -10,9 +10,8 @@ You may obtain copies of the Licence in any of the official languages at https:/
 
 from falcon import testing
 from nftables import Nftables
-from pytest import exit, fixture
-
 from nftables_api.app import app
+from pytest import exit, fixture
 
 
 def run_nft(nft, cmd):

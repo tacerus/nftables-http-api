@@ -4,8 +4,8 @@ build-backend = 'setuptools.build_meta'
 
 
 [project]
-name = 'nftables_api'
-description = 'RESTful HTTP API for nftables'
+name = 'nftables_api-server'
+description = 'RESTful HTTP API for nftables (server)'
 dynamic = ['license', 'readme', 'version']
 authors = [
   { name='Georg Pfuetzenreuter', email='georg+python@lysergic.dev' },
@@ -30,6 +30,8 @@ requires-python = '>=3.6'
 
 dependencies = [
   'PyYAML',
+  'bcrypt',
+  'falcon',
 #  'nftables',  # cannot by managed by pip
 ]
 
@@ -38,6 +40,9 @@ dev = [
   'pytest',
   'ruff',
 ]
+
+[project.scripts]
+nftables_api = 'nftables_api.server:server'
 
 [tool.setuptools]
 include-package-data = false
@@ -48,4 +53,3 @@ readme = {file = ['README.md']}
 
 [tool.setuptools.packages.find]
 where = ['.']
-exclude = ['scripts.*', 'tests', 'tests.*', 'ruff.toml']

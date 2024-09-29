@@ -8,9 +8,8 @@ An English copy of the Licence is shipped in a file called LICENSE along with th
 You may obtain copies of the Licence in any of the official languages at https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12.
 """
 
-from waitress import serve
-
 from nftables_api.app import app
+from waitress import serve
 
 if __name__ == '__main__':
     serve(app, host='*', port=9090)

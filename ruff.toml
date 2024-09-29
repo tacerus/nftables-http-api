@@ -37,7 +37,11 @@ preview = true
 explicit-preview-rules = true
 
 [lint.per-file-ignores]
-"nftables_api/__init__.py" = ["PLC0414"]  # allow explicit re-exports / avoid conflict with F401
+"nft_http_api_client/nftables_api_client/__init__.py" = ["PLC0414"]  # allow explicit re-exports / avoid conflict with F401
+"nft_http_api_server/nftables_api/__init__.py"        = ["PLC0414"]  # ^
+"nft_http_api_server/nftables-http-api.py" = [
+  "INP001",  # entrypoint script
+]
 "tests/*.py" = [
   "INP001", # tests do not need to be part of a package
   "S101",   # allow "assert" in test suites
@@ -47,5 +51,5 @@ explicit-preview-rules = true
 [lint.pydocstyle]
 convention = "pep257"
 
-[lint.isort]
-force-wrap-aliases = true
+#[lint.isort]
+#force-wrap-aliases = true
