@@ -12,6 +12,10 @@ from os import getenv
 
 import urllib3
 
+default_retmap = {
+  'status': -1,
+  'data': {},
+}
 
 class NftablesRemote:
   def __init__(self, endpoint, token=None):
@@ -29,15 +33,29 @@ class NftablesRemote:
 
 
   def get(self, path):
-    retmap = {
-      'status': -1,
-      'data': {},
-    }
+    retmap = default_retmap.copy()
 
     response = urllib3.request(
       'GET',
       f'{self.endpoint}/{path}',
       headers=self.auth_headers,
+    )
+
+    retmap['status'] = response.status
+    retmap['data'] = response.json()
+
+    return retmap
+
+  def set_append(self, path, addresses):
+    retmap = default_retmap.copy()
+
+    response = urllib3.request(
+      'POST',
+      f'{self.endpoint}/{path}',
+      headers=self.auth_headers,
+      json={
+        'addresses': addresses,
+      },
     )
 
     retmap['status'] = response.status
