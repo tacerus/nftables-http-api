@@ -5,7 +5,7 @@ build-backend = 'setuptools.build_meta'
 
 [project]
 name = 'nftables_api-server'
-description = 'RESTful HTTP API for nftables (server)'
+description = 'RESTful HTTP API for nftables (Server)'
 dynamic = ['license', 'readme', 'version']
 authors = [
   { name='Georg Pfuetzenreuter', email='georg+python@lysergic.dev' },
