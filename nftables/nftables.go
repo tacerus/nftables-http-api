@@ -2,6 +2,7 @@ package nftables
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/google/nftables"
@@ -16,6 +17,34 @@ func Connect() (*nftables.Conn, error) {
 
 	return nft, nil
 }
+
+type nftError struct {
+	Op  string
+	Err error
+}
+
+func (e *nftError) Unwrap() error {
+	return e.Err
+}
+
+func (e *nftError) Error() string {
+	return fmt.Sprintf("%s => %s", e.Op, e.Err)
+}
+
+func newNftError(op string, inner error) error {
+	e := &nftError{
+		Op:  op,
+		Err: inner,
+	}
+
+	slog.Debug(e.Error())
+
+	return e
+}
+
+var (
+	ErrUnknownFamily = errors.New("Unknown family")
+)
 
 func getFamily(familyName string) (family nftables.TableFamily) {
 	switch familyName {
@@ -42,8 +71,7 @@ func GetTable(nft *nftables.Conn, familyName string, tableName string) (*nftable
 
 	family := getFamily(familyName)
 	if family == nftables.TableFamilyUnspecified {
-		slog.Error("Failure getTable() => unknown family")
-		return nil, errors.New("unknown family")
+		return nil, newNftError("getTable()", ErrUnknownFamily)
 	}
 
 	for _, t := range tables {

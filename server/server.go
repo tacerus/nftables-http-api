@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -32,17 +33,21 @@ func (app *App) newMux() *http.ServeMux {
 }
 
 type appError struct {
-	Message string
+	Message string `json:"message"`
 }
 
 type setOut struct {
 	Elements []string
+	Flags    []string
+	Name     string
+	Type     string
 }
 
-//func (app *App) errorHandler (w http.ResponseWriter, err interface{}) {
-//    w.Header().Set("Content-Type", "application/json")
-//    json.NewEncoder(w).Encode(err)
-//}
+func (app *App) errorHandlerProp(w http.ResponseWriter, status int, err interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(err)
+	w.WriteHeader(status)
+}
 
 func (app *App) errorHandler(w http.ResponseWriter, status int, message string) {
 	j, err := json.Marshal(appError{
@@ -72,6 +77,11 @@ func (app *App) elementHandler(w http.ResponseWriter, r *http.Request) {
 
 	table, err := nftables.GetTable(nft, familyName, tableName)
 	if err != nil {
+		if errors.Is(err, nftables.ErrUnknownFamily) {
+			app.errorHandler(w, http.StatusBadRequest, "Specified family is not valid.")
+			return
+		}
+
 		app.errorHandler(w, http.StatusInternalServerError, "Failed to get tables")
 		return
 	}
