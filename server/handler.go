@@ -5,6 +5,8 @@ import (
 	"errors"
 	"net/http"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/tacerus/nftables-http-api/nftables"
 )
 
@@ -35,7 +37,7 @@ func (app *App) elementHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	set, err := nftables.GetSet(nft, table, setName)
-	if err != nil {
+	if err != nil && !errors.Is(err, unix.ENOENT) {
 		app.errorHandler(w, http.StatusInternalServerError, "Failed to get sets")
 		return
 	}
