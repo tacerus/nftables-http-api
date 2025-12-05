@@ -113,3 +113,20 @@ func GetSetElements(nft *nftables.Conn, set *nftables.Set) ([]string, error) {
 
 	return out, nil
 }
+
+func GetSetFlags(set *nftables.Set) (flags []string) {
+	if set.Constant {
+		flags = append(flags, "constant")
+	}
+	if set.Dynamic {
+		flags = append(flags, "dynamic")
+	}
+	if set.Interval {
+		flags = append(flags, "interval")
+	}
+	if set.HasTimeout {
+		flags = append(flags, "timeout")
+	}
+
+	return flags
+}

@@ -106,8 +106,12 @@ func (app *App) elementHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	out := new(setOut)
-	out.Elements = elements
+	out := &setOut{
+		Elements: elements,
+		Flags:    nftables.GetSetFlags(set),
+		Name:     set.Name,
+		Type:     set.KeyType.Name,
+	}
 
 	j, err := json.Marshal(out)
 	if err != nil {
