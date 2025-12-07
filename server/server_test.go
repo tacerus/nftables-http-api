@@ -143,21 +143,30 @@ const (
 func TestElementGet(t *testing.T) {
 	testDestructive(t)
 
-	root := "/element/"
+	r := "/element/"
 	testCases := []struct {
-		path   string
-		expect int
+		path       string
+		expectCode int
+		expectBody string
 	}{
-		{root + "/foo/bar/baz", T_FAMILY_NOT_EXIST},
+		{r + "/foo/bar/baz", T_FAMILY_NOT_EXIST, `{"message":"Specified family is not valid."}`},
+		{r + "/inet/bar/baz", T_TABLE_NOT_EXIST, `{"message":"Table not found"}`},
+		{r + "/inet/filter/baz", T_SET_NOT_EXIST, `{"message":"Set not found"}`},
+		{r + "/inet/filter/testset4", T_OK, `{"Elements":null,"Flags":["interval"],"Name":"testset4","Type":"ipv4_addr"}`},
+		{r + "/inet/filter/testset6", T_OK, `{"Elements":null,"Flags":["interval"],"Name":"testset6","Type":"ipv6_addr"}`},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.path, func(t *testing.T) {
-			r, _ := realGet(t, tc.path)
-			switch tc.expect {
+			r, b := realGet(t, tc.path)
+			switch tc.expectCode {
 			case T_FAMILY_NOT_EXIST:
 				assertStatusEqual(t, r.StatusCode, http.StatusBadRequest)
+			case T_TABLE_NOT_EXIST, T_SET_NOT_EXIST:
+				assertStatusEqual(t, r.StatusCode, http.StatusNotFound)
 			}
+
+			assert.JSONEq(t, tc.expectBody, string(b))
 		})
 	}
 }
