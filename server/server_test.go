@@ -152,8 +152,8 @@ func TestElementGet(t *testing.T) {
 		{r + "/foo/bar/baz", T_FAMILY_NOT_EXIST, `{"message":"Specified family is not valid."}`},
 		{r + "/inet/bar/baz", T_TABLE_NOT_EXIST, `{"message":"Table not found"}`},
 		{r + "/inet/filter/baz", T_SET_NOT_EXIST, `{"message":"Set not found"}`},
-		{r + "/inet/filter/testset4", T_OK, `{"Elements":null,"Flags":["interval"],"Name":"testset4","Type":"ipv4_addr"}`},
-		{r + "/inet/filter/testset6", T_OK, `{"Elements":null,"Flags":["interval"],"Name":"testset6","Type":"ipv6_addr"}`},
+		{r + "/inet/filter/testset4", T_OK, `{"Elements":[],"Flags":["interval"],"Name":"testset4","Type":"ipv4_addr"}`},
+		{r + "/inet/filter/testset6", T_OK, `{"Elements":[],"Flags":["interval"],"Name":"testset6","Type":"ipv6_addr"}`},
 	}
 
 	for _, tc := range testCases {

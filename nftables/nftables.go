@@ -76,13 +76,14 @@ func GetSet(nft *nftables.Conn, table *nftables.Table, setName string) (*nftable
 	return set, nil
 }
 
-func GetSetElements(nft *nftables.Conn, set *nftables.Set) (out []string, err error) {
+func GetSetElements(nft *nftables.Conn, set *nftables.Set) ([]string, error) {
 	elements, err := nft.GetSetElements(set)
 	if err != nil {
 		slog.Error("Failure GetSetElements() => GetSetElements()", "error", err)
 		return nil, err
 	}
 
+	out := []string{}
 	var start []byte
 
 	// https://github.com/google/nftables/issues/320
@@ -134,7 +135,9 @@ func GetSetElements(nft *nftables.Conn, set *nftables.Set) (out []string, err er
 	return out, nil
 }
 
-func GetSetFlags(set *nftables.Set) (flags []string) {
+func GetSetFlags(set *nftables.Set) []string {
+	flags := []string{}
+
 	if set.Constant {
 		flags = append(flags, "constant")
 	}
