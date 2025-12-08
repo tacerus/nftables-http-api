@@ -7,14 +7,16 @@ import (
 )
 
 type App struct {
-	bind string
-	Ctx  context.Context
+	bind   string
+	tokens core.ConfigTokens
+	Ctx    context.Context
 }
 
 func NewApp(c core.Config) *App {
 	app := new(App)
 
 	app.bind = c.Bind
+	app.tokens = c.Tokens
 	app.Ctx = context.Background()
 
 	return app

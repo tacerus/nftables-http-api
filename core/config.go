@@ -6,8 +6,12 @@ import (
 	"os"
 )
 
+type ConfigTokenPaths map[string][]string
+type ConfigTokens map[string]ConfigTokenPaths
+
 type Config struct {
-	Bind string
+	Bind   string
+	Tokens ConfigTokens
 }
 
 func NewConfig(file string) Config {

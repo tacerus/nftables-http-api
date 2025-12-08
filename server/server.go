@@ -16,7 +16,7 @@ func (app *App) Start() *http.Server {
 	mux := app.newMux()
 	srv := &http.Server{
 		Addr:    app.bind,
-		Handler: mux,
+		Handler: app.authHandler(mux),
 	}
 
 	go func() {

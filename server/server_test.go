@@ -72,6 +72,12 @@ var (
 			},
 		},
 	}
+
+	fixtureTokens = core.ConfigTokens{
+		"$2y$05$4j6cgtb28xMeoVdlIF9XVOaTJlvux89oUo5GIEr2LdJNjYPkVz.HK": core.ConfigTokenPaths{ // thisTokenIsAuthorized
+			"/element/*": []string{"GET"},
+		},
+	}
 )
 
 type appTest struct {
@@ -83,20 +89,29 @@ var at *appTest
 
 // performs a GET request against the live server as opposed to mocking a handler
 // returns the response object and the decoded body
-func realGet(t *testing.T, path string) (*http.Response, []byte) {
+func realGet(t *testing.T, path string, token string) (*http.Response, []byte) {
 	t.Helper()
 
-	r, err := at.c.Get("http://localhost:8000" + path)
+	request, err := http.NewRequest("GET", "http://localhost:8000"+path, nil)
+	if err != nil {
+		t.Fatalf("Failed to construct HTTP request for testing: %v", err)
+	}
+
+	if token != "" {
+		request.Header.Set(TOKEN_HEADER, token)
+	}
+
+	response, err := at.c.Do(request)
 	if err != nil {
 		t.Error(err)
 	}
 
-	b, err := ioutil.ReadAll(r.Body)
+	b, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		t.Error(err)
 	}
 
-	return r, b
+	return response, b
 }
 
 // performs a GET request against a mocked handler
@@ -144,7 +159,8 @@ func TestMain(m *testing.M) {
 	at = new(appTest)
 
 	app := NewApp(core.Config{
-		Bind: "[::1]:8000",
+		Bind:   "[::1]:8000",
+		Tokens: fixtureTokens,
 	})
 	at.s = app.Start()
 	defer at.s.Shutdown(context.Background())
@@ -255,15 +271,27 @@ func TestElementGet(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.path, func(t *testing.T) {
-			r, b := realGet(t, tc.path)
-			switch tc.expectCode {
-			case T_FAMILY_NOT_EXIST:
-				assertStatusEqual(t, r.StatusCode, http.StatusBadRequest)
-			case T_TABLE_NOT_EXIST, T_SET_NOT_EXIST:
-				assertStatusEqual(t, r.StatusCode, http.StatusNotFound)
-			}
+			for _, token := range []string{
+				"",
+				"thisTokenIsBogus",
+				"thisTokenIsAuthorized", // $2y$05$4j6cgtb28xMeoVdlIF9XVOaTJlvux89oUo5GIEr2LdJNjYPkVz.HK
+			} {
+				r, b := realGet(t, tc.path, token)
 
-			assert.JSONEq(t, tc.expectBody, string(b))
+				if token != "thisTokenIsAuthorized" {
+					assertStatusEqual(t, r.StatusCode, http.StatusUnauthorized)
+					continue
+				}
+
+				switch tc.expectCode {
+				case T_FAMILY_NOT_EXIST:
+					assertStatusEqual(t, r.StatusCode, http.StatusBadRequest)
+				case T_TABLE_NOT_EXIST, T_SET_NOT_EXIST:
+					assertStatusEqual(t, r.StatusCode, http.StatusNotFound)
+				}
+
+				assert.JSONEq(t, tc.expectBody, string(b))
+			}
 		})
 	}
 }
