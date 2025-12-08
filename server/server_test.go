@@ -2,17 +2,76 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/tacerus/nftables-http-api/core"
+)
+
+const (
+	NFT = "nft"
+
+	VAR_DESTRUCTIVE = "NFT_HTTP_API_TEST_DESTRUCTIVE"
+
+	T_OK               = 0
+	T_FAMILY_NOT_EXIST = 1
+	T_TABLE_NOT_EXIST  = 2
+	T_SET_NOT_EXIST    = 3
+)
+
+var (
+	fixtureSets = []struct {
+		name  string
+		stype string
+		flags []string
+		// elements shall be listed in the same format as printed by nft
+		elements []string
+	}{
+		{
+			"testset4_empty",
+			"ipv4_addr",
+			[]string{"interval"},
+			[]string{},
+		},
+		{
+			"testset6_empty",
+			"ipv6_addr",
+			[]string{"interval"},
+			[]string{},
+		},
+		{
+			"testset4_mixaddrs",
+			"ipv4_addr",
+			[]string{"interval"},
+			[]string{
+				"127.0.0.1",
+				"192.0.2.16/28",
+				"192.168.4.2-192.168.4.50",
+			},
+		},
+		{
+			"testset6_mixaddrs",
+			"ipv6_addr",
+			[]string{"interval"},
+			[]string{
+				"2001:db8:a1:11::/64",
+				"2001:db8:a2:11::100",
+				"2001:db8:100::/48",
+				"2a02:1748:f7df:9c80::/64",
+				"2001:db8:200:a::100-2001:db8:200:a::150",
+			},
+		},
+	}
 )
 
 type appTest struct {
@@ -70,6 +129,12 @@ func testDestructive(t *testing.T) {
 	}
 }
 
+type TestSets struct {
+	name   string
+	family int
+	flags  []string
+}
+
 func TestMain(m *testing.M) {
 	// TODO: work with capabilities instead of root
 	//if allowDestructive() && os.Getuid() != 0 {
@@ -97,12 +162,31 @@ func TestMain(m *testing.M) {
 			exec.Command(
 				"nft", "add", "table", "inet", "filter",
 			),
-			exec.Command(
-				"nft", "add", "set", "inet", "filter", "testset6", "{ type ipv6_addr ; flags interval ; }",
-			),
-			exec.Command(
-				"nft", "add", "set", "inet", "filter", "testset4", "{ type ipv4_addr ; flags interval ; }",
-			),
+		}
+
+		nftCmdAdd := []string{"add"}
+		nftCmdAddElement := slices.Concat(nftCmdAdd, []string{"element"})
+		nftCmdAddSet := slices.Concat(nftCmdAdd, []string{"set"})
+		nftCmdInetFilter := []string{"inet", "filter"}
+
+		for _, s := range fixtureSets {
+			cmdInit = append(cmdInit, exec.Command(
+				NFT,
+				slices.Concat(nftCmdAddSet, nftCmdInetFilter, []string{
+					s.name,
+					"{ type " + s.stype + "; flags " + strings.Join(s.flags, ", ") + " ; }",
+				})...,
+			))
+
+			if len(s.elements) > 0 {
+				cmdInit = append(cmdInit, exec.Command(
+					NFT,
+					slices.Concat(nftCmdAddElement, nftCmdInetFilter, []string{
+						s.name,
+						"{ " + strings.Join(s.elements, ", ") + " }",
+					})...,
+				))
+			}
 		}
 
 		for _, cmd := range cmdInit {
@@ -131,29 +215,42 @@ func TestIndex(t *testing.T) {
 	assertStatusEqual(t, r.Code, http.StatusNotFound)
 }
 
-const (
-	VAR_DESTRUCTIVE = "NFT_HTTP_API_TEST_DESTRUCTIVE"
-
-	T_OK               = 0
-	T_FAMILY_NOT_EXIST = 1
-	T_TABLE_NOT_EXIST  = 2
-	T_SET_NOT_EXIST    = 3
-)
+type getCases struct {
+	path       string
+	expectCode int
+	expectBody string
+}
 
 func TestElementGet(t *testing.T) {
 	testDestructive(t)
 
 	r := "/element/"
-	testCases := []struct {
-		path       string
-		expectCode int
-		expectBody string
-	}{
+	testCases := []getCases{
 		{r + "/foo/bar/baz", T_FAMILY_NOT_EXIST, `{"message":"Specified family is not valid."}`},
 		{r + "/inet/bar/baz", T_TABLE_NOT_EXIST, `{"message":"Table not found"}`},
 		{r + "/inet/filter/baz", T_SET_NOT_EXIST, `{"message":"Set not found"}`},
-		{r + "/inet/filter/testset4", T_OK, `{"Elements":[],"Flags":["interval"],"Name":"testset4","Type":"ipv4_addr"}`},
-		{r + "/inet/filter/testset6", T_OK, `{"Elements":[],"Flags":["interval"],"Name":"testset6","Type":"ipv6_addr"}`},
+	}
+
+	for _, s := range fixtureSets {
+
+		// TODO: try to order elements in the same way as returned by nft instead
+		slices.Sort(s.elements)
+
+		// generate response bodies like
+		//   {"Elements":[],"Flags":["interval"],"Name":"testset4_empty","Type":"ipv4_addr"}
+		b, err := json.Marshal(setOut{
+			Elements: s.elements,
+			Flags:    s.flags,
+			Name:     s.name,
+			Type:     s.stype,
+		})
+		if err != nil {
+			t.Fatalf("Failure constructing JSON for testing: %v", err)
+		}
+
+		testCases = append(testCases, getCases{
+			r + "/inet/filter/" + s.name, T_OK, string(b),
+		})
 	}
 
 	for _, tc := range testCases {

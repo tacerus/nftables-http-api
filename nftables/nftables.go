@@ -132,6 +132,8 @@ func GetSetElements(nft *nftables.Conn, set *nftables.Set) ([]string, error) {
 		}
 	}
 
+	slices.Sort(out)
+
 	return out, nil
 }
 
