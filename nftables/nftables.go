@@ -1,9 +1,18 @@
 package nftables
 
 import (
+	"bytes"
+	"fmt"
 	"log/slog"
+	"net/netip"
+	"slices"
 
 	"github.com/google/nftables"
+)
+
+var (
+	SingleAddrMaskIPv4 = bytes.Repeat([]byte{255}, 4)
+	SingleAddrMaskIPv6 = bytes.Repeat([]byte{255}, 16)
 )
 
 func Connect() (*nftables.Conn, error) {
@@ -74,11 +83,52 @@ func GetSetElements(nft *nftables.Conn, set *nftables.Set) (out []string, err er
 		return nil, err
 	}
 
-	switch set.KeyType.Name {
-	case "ipv4_addr", "ipv6_addr":
-		out = parseAddrElements(elements)
-	default:
-		slog.Error("Unimplemented set data type", "SetName", set.Name, "KeyTypeName", set.KeyType.Name)
+	var start []byte
+
+	// https://github.com/google/nftables/issues/320
+	slices.Reverse(elements)
+
+	for i, e := range elements {
+		eaddr, _ := netip.AddrFromSlice(e.Key)
+		slog.Debug("parsing element", "e", e, "addr", eaddr)
+		switch set.KeyType.Name {
+		case "ipv4_addr", "ipv6_addr":
+			if i == 0 && e.IntervalEnd {
+				slog.Debug("skipping first")
+				continue
+			}
+
+			if !e.IntervalEnd {
+				start = e.Key
+				continue
+			}
+
+			if e.IntervalEnd {
+				ip1, _ := netip.AddrFromSlice(start)
+				ip2, _ := netip.AddrFromSlice(e.Key)
+				slog.Debug("constructing net from interval range", "first", ip1, "last", ip2)
+				net, ok, err := nftables.NetFromInterval(start, e.Key)
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+				if ok {
+					if ip1.Is4() && bytes.Equal(net.Mask, SingleAddrMaskIPv4) || ip1.Is6() && bytes.Equal(net.Mask, SingleAddrMaskIPv6) {
+						out = append(out, net.IP.String())
+					} else {
+						out = append(out, net.String())
+					}
+				} else {
+					out = append(out, fmt.Sprintf("%s-%s", ip1, ip2.Prev()))
+				}
+			}
+
+			// TODO: handle IntervalOpen?
+
+		default:
+			slog.Error("Unimplemented set data type", "SetName", set.Name, "KeyTypeName", set.KeyType.Name)
+			break
+		}
 	}
 
 	return out, nil
