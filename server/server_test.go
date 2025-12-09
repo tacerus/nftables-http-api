@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/tacerus/nftables-http-api/core"
+	nftapi "github.com/tacerus/nftables-http-api/nftables"
 )
 
 const (
@@ -254,7 +255,7 @@ func TestElementGet(t *testing.T) {
 
 		// generate response bodies like
 		//   {"Elements":[],"Flags":["interval"],"Name":"testset4_empty","Type":"ipv4_addr"}
-		b, err := json.Marshal(setOut{
+		b, err := json.Marshal(nftapi.Set{
 			Elements: s.elements,
 			Flags:    s.flags,
 			Name:     s.name,
