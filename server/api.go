@@ -12,7 +12,7 @@ import (
 	nftapi "github.com/tacerus/nftables-http-api/nftables"
 )
 
-func (app *App) elementGet(w http.ResponseWriter, r *http.Request, table *nftables.Table, set *nftables.Set, elements []string) {
+func (app *App) setGet(w http.ResponseWriter, r *http.Request, table *nftables.Table, set *nftables.Set, elements []string) {
 	if table == nil {
 		app.errorHandler(w, http.StatusNotFound, "Table not found")
 		return
@@ -43,7 +43,7 @@ func (app *App) elementGet(w http.ResponseWriter, r *http.Request, table *nftabl
 	return
 }
 
-func (app *App) elementPut(w http.ResponseWriter, r *http.Request, nft *nftables.Conn, table *nftables.Table, set *nftables.Set, elements []string) {
+func (app *App) setPut(w http.ResponseWriter, r *http.Request, nft *nftables.Conn, table *nftables.Table, set *nftables.Set, elements []string) {
 	if table == nil {
 		app.errorHandler(w, http.StatusNotFound, "Table not found")
 		return
@@ -69,13 +69,13 @@ func (app *App) elementPut(w http.ResponseWriter, r *http.Request, nft *nftables
 
 	err = nft.Flush()
 	if err != nil {
-		slog.Debug("Failed to flush.", "operation", "elementPut", "error", err)
+		slog.Debug("Failed to flush.", "operation", "setPut", "error", err)
 		app.errorHandler(w, http.StatusInternalServerError, "Flushing of set creation failed.")
 		return
 	}
 }
 
-func (app *App) elementHandler(w http.ResponseWriter, r *http.Request) {
+func (app *App) setHandler(w http.ResponseWriter, r *http.Request) {
 	nft, err := nftapi.Connect()
 	if err != nil {
 		app.errorHandler(w, http.StatusInternalServerError, "Failed to initialize nftables")
@@ -102,7 +102,7 @@ func (app *App) elementHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if table == nil {
-		goto processElement
+		goto processSet
 	}
 
 	set, err = nftapi.GetSet(nft, table, setName)
@@ -112,7 +112,7 @@ func (app *App) elementHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if set == nil {
-		goto processElement
+		goto processSet
 	}
 
 	elements, err = nftapi.GetSetElements(nft, set)
@@ -121,11 +121,11 @@ func (app *App) elementHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-processElement:
+processSet:
 	switch r.Method {
 	case http.MethodGet:
-		app.elementGet(w, r, table, set, elements)
+		app.setGet(w, r, table, set, elements)
 	case http.MethodPut:
-		app.elementPut(w, r, nft, table, set, elements)
+		app.setPut(w, r, nft, table, set, elements)
 	}
 }

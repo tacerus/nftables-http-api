@@ -76,7 +76,7 @@ var (
 
 	fixtureTokens = core.ConfigTokens{
 		"$2y$05$4j6cgtb28xMeoVdlIF9XVOaTJlvux89oUo5GIEr2LdJNjYPkVz.HK": core.ConfigTokenPaths{ // thisTokenIsAuthorized
-			"/element/*": []string{"GET"},
+			"/set/*": []string{"GET"},
 		},
 	}
 )
@@ -238,10 +238,10 @@ type getCases struct {
 	expectBody string
 }
 
-func TestElementGet(t *testing.T) {
+func TestSetGet(t *testing.T) {
 	testDestructive(t)
 
-	r := "/element/"
+	r := "/set/"
 	testCases := []getCases{
 		{r + "/foo/bar/baz", T_FAMILY_NOT_EXIST, `{"message":"Specified family is not valid."}`},
 		{r + "/inet/bar/baz", T_TABLE_NOT_EXIST, `{"message":"Table not found"}`},

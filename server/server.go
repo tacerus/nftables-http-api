@@ -7,7 +7,7 @@ import (
 
 func (app *App) newMux() *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/element/{nfFamily}/{nfTable}/{nfSet}", app.elementHandler)
+	mux.HandleFunc("/set/{nfFamily}/{nfTable}/{nfSet}", app.setHandler)
 
 	return mux
 }
