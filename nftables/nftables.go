@@ -223,20 +223,34 @@ func GetSetElements(nft *nftables.Conn, set *nftables.Set) ([]string, error) {
 
 			if !e.IntervalEnd {
 				start = e.Key
-				continue
+
+				if !e.IntervalOpen {
+					continue
+				}
 			}
 
-			if e.IntervalEnd {
+			if e.IntervalEnd || e.IntervalOpen {
 				ip1, _ := netip.AddrFromSlice(start)
-				ip2, _ := netip.AddrFromSlice(e.Key)
+				startIpv6 := ip1.Is6()
+
+				var end net.IP
+
+				if e.IntervalOpen {
+					end = net.IP{}
+				} else {
+					end = e.Key
+				}
+
+				ip2, _ := netip.AddrFromSlice(end)
+
 				slog.Debug("constructing net from interval range", "first", ip1, "last", ip2)
-				net, ok, err := nftables.NetFromInterval(start, e.Key)
+				net, ok, err := nftables.NetFromInterval(start, end)
 				if err != nil {
 					fmt.Println(err)
 					continue
 				}
 				if ok {
-					if ip1.Is4() && bytes.Equal(net.Mask, SingleAddrMaskIPv4) || ip1.Is6() && bytes.Equal(net.Mask, SingleAddrMaskIPv6) {
+					if ip1.Is4() && bytes.Equal(net.Mask, SingleAddrMaskIPv4) || startIpv6 && bytes.Equal(net.Mask, SingleAddrMaskIPv6) {
 						out = append(out, net.IP.String())
 					} else {
 						out = append(out, net.String())

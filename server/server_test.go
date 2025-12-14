@@ -67,6 +67,14 @@ var (
 			},
 		},
 		{
+			"testset4_open",
+			"ipv4_addr",
+			[]string{"interval"},
+			[]string{
+				"128.0.0.0/1",
+			},
+		},
+		{
 			"testset6_mixaddrs",
 			"ipv6_addr",
 			[]string{"interval"},
