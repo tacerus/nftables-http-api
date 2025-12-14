@@ -5,10 +5,6 @@ import (
 	"net/http"
 )
 
-type appError struct {
-	Message string `json:"message"`
-}
-
 func (app *App) errorHandlerProp(w http.ResponseWriter, status int, err interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(err)
@@ -16,7 +12,7 @@ func (app *App) errorHandlerProp(w http.ResponseWriter, status int, err interfac
 }
 
 func (app *App) errorHandler(w http.ResponseWriter, status int, message string) {
-	j, err := json.Marshal(appError{
+	j, err := json.Marshal(genericOut{
 		Message: message,
 	})
 	if err != nil {

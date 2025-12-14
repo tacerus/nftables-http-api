@@ -73,6 +73,19 @@ func (app *App) setPut(w http.ResponseWriter, r *http.Request, nft *nftables.Con
 		app.errorHandler(w, http.StatusInternalServerError, "Flushing of set creation failed.")
 		return
 	}
+
+	j, err := json.Marshal(genericOut{
+		Message: "ok",
+	})
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Fatal Server Error"))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(j)
 }
 
 func (app *App) setHandler(w http.ResponseWriter, r *http.Request) {
