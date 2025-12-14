@@ -166,7 +166,11 @@ func TestMain(m *testing.M) {
 	at.s = app.Start()
 	defer at.s.Shutdown(context.Background())
 
-	at.c = &http.Client{}
+	at.c = &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
 
 	cmdNft := "nft"
 	cmdFlush := []string{
@@ -242,10 +246,10 @@ func TestSetGet(t *testing.T) {
 	testDestructive(t)
 
 	r := "/set/"
-	testCases := []getCases{
-		{r + "/foo/bar/baz", T_FAMILY_NOT_EXIST, `{"message":"Specified family is not valid."}`},
-		{r + "/inet/bar/baz", T_TABLE_NOT_EXIST, `{"message":"Table not found"}`},
-		{r + "/inet/filter/baz", T_SET_NOT_EXIST, `{"message":"Set not found"}`},
+	testCases := []testCase{
+		{r + "foo/bar/baz", T_FAMILY_NOT_EXIST, `{"message":"Specified family is not valid."}`},
+		{r + "inet/bar/baz", T_TABLE_NOT_EXIST, `{"message":"Table not found"}`},
+		{r + "inet/filter/baz", T_SET_NOT_EXIST, `{"message":"Set not found"}`},
 	}
 
 	for _, s := range fixtureSets {
@@ -265,8 +269,8 @@ func TestSetGet(t *testing.T) {
 			t.Fatalf("Failure constructing JSON for testing: %v", err)
 		}
 
-		testCases = append(testCases, getCases{
-			r + "/inet/filter/" + s.name, T_OK, string(b),
+		testCases = append(testCases, testCase{
+			r + "inet/filter/" + s.name, T_OK, string(b),
 		})
 	}
 
