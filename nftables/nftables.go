@@ -121,6 +121,7 @@ func AddSet(nft *nftables.Conn, table *nftables.Table, apiSet Set) error {
 
 	// qq: optimize cap? len of input might be lower than len of output
 	nfElements := make([]nftables.SetElement, 0, len(apiSet.Elements))
+	var singleCidr int
 
 	switch apiSet.Type {
 	case "ipv4_addr":
@@ -128,11 +129,13 @@ func AddSet(nft *nftables.Conn, table *nftables.Table, apiSet Set) error {
 			Key:         net.IPv4zero.To4(),
 			IntervalEnd: true,
 		})
+		singleCidr = 32
 	case "ipv6_addr":
 		nfElements = append(nfElements, nftables.SetElement{
 			Key:         net.IPv4zero.To16(),
 			IntervalEnd: true,
 		})
+		singleCidr = 128
 	}
 
 	for _, apiElement := range apiSet.Elements {
@@ -142,12 +145,14 @@ func AddSet(nft *nftables.Conn, table *nftables.Table, apiSet Set) error {
 			var end net.IP
 			var err error
 
-			if strings.Contains(apiElement, "/") {
-				start, end, err = nftables.NetInterval(apiElement)
-			} else if strings.Contains(apiElement, "-") {
+			if strings.Contains(apiElement, "-") {
 				start, end, err = netIntervalFromRange(apiElement)
 			} else {
-				start = net.ParseIP(apiElement)
+				if !strings.Contains(apiElement, "/") {
+					apiElement = fmt.Sprintf("%s/%d", apiElement, singleCidr)
+				}
+
+				start, end, err = nftables.NetInterval(apiElement)
 			}
 
 			if err != nil {
@@ -155,21 +160,14 @@ func AddSet(nft *nftables.Conn, table *nftables.Table, apiSet Set) error {
 				return err
 			}
 
-			if len(start) > 0 && len(end) > 0 {
-				nfElements = append(nfElements, nftables.SetElement{
-					Key:         start,
-					IntervalEnd: false,
-				})
-				nfElements = append(nfElements, nftables.SetElement{
-					Key:         end,
-					IntervalEnd: true,
-				})
-			} else {
-				nfElements = append(nfElements, nftables.SetElement{
-					Key:         net.ParseIP(apiElement),
-					IntervalEnd: true,
-				})
-			}
+			nfElements = append(nfElements, nftables.SetElement{
+				Key:         start,
+				IntervalEnd: false,
+			})
+			nfElements = append(nfElements, nftables.SetElement{
+				Key:         end,
+				IntervalEnd: true,
+			})
 
 		default:
 			slog.Warn("Unsupported set type.", "type", apiSet.Type)
