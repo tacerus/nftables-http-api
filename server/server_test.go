@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -21,6 +22,7 @@ import (
 
 const (
 	NFT = "nft"
+	URL = "http://localhost:8000"
 
 	VAR_DESTRUCTIVE = "NFT_HTTP_API_TEST_DESTRUCTIVE"
 
@@ -28,6 +30,10 @@ const (
 	T_FAMILY_NOT_EXIST = 1
 	T_TABLE_NOT_EXIST  = 2
 	T_SET_NOT_EXIST    = 3
+
+	T_BODY_NOT_AUTHORIZED = `{"message":"The supplied token is not authorized to perform this request."}`
+	T_BODY_INVALID_TOKEN  = `{"message":"Invalid token."}`
+	T_BODY_MISSING_TOKEN  = `{"message":"Missing token."}`
 )
 
 var (
@@ -74,9 +80,13 @@ var (
 		},
 	}
 
+	// TODO: also test fine grained paths
 	fixtureTokens = core.ConfigTokens{
 		"$2y$05$4j6cgtb28xMeoVdlIF9XVOaTJlvux89oUo5GIEr2LdJNjYPkVz.HK": core.ConfigTokenPaths{ // thisTokenIsAuthorized
 			"/set/*": []string{"GET"},
+		},
+		"$2y$05$ZldSvJppBs5o3E.N2Jf8vO8AtVCNmJtQsjZKj81aFld77KK38SvP.": core.ConfigTokenPaths{ // ICanPut
+			"/set/*": []string{"PUT"},
 		},
 	}
 )
@@ -93,7 +103,37 @@ var at *appTest
 func realGet(t *testing.T, path string, token string) (*http.Response, []byte) {
 	t.Helper()
 
-	request, err := http.NewRequest("GET", "http://localhost:8000"+path, nil)
+	request, err := http.NewRequest(http.MethodGet, URL+path, nil)
+	if err != nil {
+		t.Fatalf("Failed to construct HTTP request for testing: %v", err)
+	}
+
+	if token != "" {
+		request.Header.Set(TOKEN_HEADER, token)
+	}
+
+	response, err := at.c.Do(request)
+	if err != nil {
+		t.Error(err)
+	}
+
+	b, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		t.Error(err)
+	}
+
+	return response, b
+}
+
+// performs a PUT request against the live server as opposed to mocking a handler
+// returns the response object and the decoded body
+func realPut(t *testing.T, path string, token string, payload interface{}) (*http.Response, []byte) {
+	t.Helper()
+
+	buf := new(bytes.Buffer)
+	json.NewEncoder(buf).Encode(payload)
+
+	request, err := http.NewRequest(http.MethodPut, URL+path, buf)
 	if err != nil {
 		t.Fatalf("Failed to construct HTTP request for testing: %v", err)
 	}
@@ -236,10 +276,16 @@ func TestIndex(t *testing.T) {
 	assertStatusEqual(t, r.Code, http.StatusNotFound)
 }
 
-type getCases struct {
+type testCase struct {
 	path       string
 	expectCode int
 	expectBody string
+}
+
+type testCaseSet struct {
+	testCase
+
+	payload nftapi.Set
 }
 
 func TestSetGet(t *testing.T) {
@@ -285,6 +331,13 @@ func TestSetGet(t *testing.T) {
 
 				if token != "thisTokenIsAuthorized" {
 					assertStatusEqual(t, r.StatusCode, http.StatusUnauthorized)
+					if token == "" {
+						assert.JSONEq(t, T_BODY_MISSING_TOKEN, string(b))
+					} else if token == "thisTokenIsBogus" {
+						assert.JSONEq(t, T_BODY_INVALID_TOKEN, string(b))
+					} else {
+						assert.JSONEq(t, T_BODY_NOT_AUTHORIZED, string(b))
+					}
 					continue
 				}
 
@@ -293,6 +346,74 @@ func TestSetGet(t *testing.T) {
 					assertStatusEqual(t, r.StatusCode, http.StatusBadRequest)
 				case T_TABLE_NOT_EXIST, T_SET_NOT_EXIST:
 					assertStatusEqual(t, r.StatusCode, http.StatusNotFound)
+				case T_OK:
+					assertStatusEqual(t, r.StatusCode, http.StatusOK)
+				}
+
+				assert.JSONEq(t, tc.expectBody, string(b))
+			}
+		})
+	}
+}
+
+func TestSetPut(t *testing.T) {
+	testDestructive(t)
+
+	r := "/set/"
+	testCases := []testCaseSet{
+		{testCase: testCase{r + "foo/bar/baz", T_FAMILY_NOT_EXIST, `{"message":"Specified family is not valid."}`}},
+		{testCase: testCase{r + "inet/bar/baz", T_TABLE_NOT_EXIST, `{"message":"Table not found"}`}},
+	}
+
+	for _, s := range fixtureSets {
+		// generate request bodies like
+		//   {"Elements":[],"Flags":["interval"],"Name":"testset4_empty","Type":"ipv4_addr"}
+
+		testCases = append(testCases, testCaseSet{
+			testCase: testCase{
+				path:       r + "inet/filter/" + s.name,
+				expectCode: T_OK,
+				expectBody: `{"message":"ok"}`,
+			},
+			payload: nftapi.Set{
+				Elements: s.elements,
+				Flags:    s.flags,
+				Name:     s.name,
+				Type:     s.stype,
+			},
+		})
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.path, func(t *testing.T) {
+			for _, token := range []string{
+				"",
+				"thisTokenIsBogus",
+				"thisTokenIsAuthorized", // $2y$05$4j6cgtb28xMeoVdlIF9XVOaTJlvux89oUo5GIEr2LdJNjYPkVz.HK
+				"ICanPut",               // $2y$05$ZldSvJppBs5o3E.N2Jf8vO8AtVCNmJtQsjZKj81aFld77KK38SvP.
+			} {
+				fmt.Printf("testing token %s\n", token)
+				r, b := realPut(t, tc.path, token, tc.payload)
+
+				if token != "ICanPut" {
+					assertStatusEqual(t, r.StatusCode, http.StatusUnauthorized)
+					if token == "" {
+						assert.JSONEq(t, T_BODY_MISSING_TOKEN, string(b))
+					} else if token == "thisTokenIsBogus" {
+						assert.JSONEq(t, T_BODY_INVALID_TOKEN, string(b))
+					} else {
+						assert.JSONEq(t, T_BODY_NOT_AUTHORIZED, string(b))
+					}
+					continue
+				}
+
+				switch tc.expectCode {
+				case T_FAMILY_NOT_EXIST:
+					assertStatusEqual(t, r.StatusCode, http.StatusBadRequest)
+				case T_TABLE_NOT_EXIST, T_SET_NOT_EXIST:
+					assertStatusEqual(t, r.StatusCode, http.StatusNotFound)
+				case T_OK:
+					assertStatusEqual(t, r.StatusCode, http.StatusOK)
 				}
 
 				assert.JSONEq(t, tc.expectBody, string(b))
